@@ -2,6 +2,7 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.scoreStates.AmpState;
 import frc.robot.scoreStates.ClimbState;
@@ -30,6 +31,7 @@ import frc.robot.subsystems.shooter.ShooterIO;
 import frc.robot.subsystems.shooter.ShooterIOReal;
 import frc.robot.subsystems.shooter.ShooterIOSim;
 import frc.robot.subsystems.swerve.SwerveDrive;
+import java.util.Set;
 
 public class RobotContainer {
     private static RobotContainer INSTANCE = null;
@@ -115,17 +117,26 @@ public class RobotContainer {
                         () -> true));
     }
 
-    private Command updateScoreState() {
-        return Commands.repeatingSequence(
-                currentState.calculateTargets(), currentState.prepareSubsystems());
+    private Command updateScoreState(ScoreState newState, Set<Subsystem> scoringRequirements) {
+        return Commands.runOnce(() -> currentState = newState)
+                .andThen(
+                        Commands.defer(
+                                () ->
+                                        (Commands.repeatingSequence(
+                                                currentState.calculateTargets(),
+                                                currentState.prepareSubsystems())),
+                                scoringRequirements));
     }
 
     private void configureButtonBindings() {
         xboxController
                 .a()
-                .onTrue(
-                        Commands.runOnce(() -> currentState = shootState)
-                                .andThen(updateScoreState()));
+                .onTrue(updateScoreState(shootState, Set.of(swerveDrive, conveyor, hood, shooter)));
+
+        Set<Subsystem> ampClimbRequirements = Set.of(swerveDrive, elevator, gripper);
+        xboxController.b().onTrue(updateScoreState(ampState, ampClimbRequirements));
+        xboxController.x().onTrue(updateScoreState(climbState, ampClimbRequirements));
+
         xboxController
                 .b()
                 .onTrue(
