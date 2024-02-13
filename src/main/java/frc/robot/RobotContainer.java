@@ -140,15 +140,9 @@ public class RobotContainer {
         xboxController
                 .b()
                 .onTrue(
-                        Commands.runOnce(() -> currentState = ampState)
-                                .andThen(updateScoreState()));
-        xboxController
-                .x()
-                .onTrue(
-                        Commands.runOnce(() -> currentState = climbState)
-                                .andThen(updateScoreState()));
-
-        xboxController.rightTrigger(0.1).onTrue(Commands.deferredProxy(() -> currentState.score()));
+                        Commands.defer(
+                                () -> currentState.score(),
+                                Set.of(swerveDrive, conveyor, hood, shooter, elevator, gripper)));
     }
 
     /**
